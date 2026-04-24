@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Meal Log PRO | Compact</title>
+    <title>Meal Log PRO | Ultra Compact</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exif-js/2.3.0/exif.min.js"></script>
     <style>
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
@@ -11,35 +11,33 @@
         .container { max-width: 500px; margin: 0 auto; }
         .card { background: white; border-radius: 20px; padding: 12px; margin-bottom: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
         
-        /* 달력 높이 2/3 축소 */
-        .cal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-weight: bold; font-size: 0.9rem; }
-        .btn-m { padding: 4px 12px; background: #f1f3f5; border-radius: 8px; border: none; cursor: pointer; font-size: 0.8rem; }
+        /* 달력 높이 축소 */
+        .cal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-weight: bold; font-size: 0.85rem; }
+        .btn-m { padding: 3px 10px; background: #f1f3f5; border-radius: 8px; border: none; cursor: pointer; font-size: 0.75rem; }
         .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; }
-        .cal-grid div { padding: 6px 0; font-size: 0.85rem; border-radius: 10px; cursor: pointer; }
+        .cal-grid div { padding: 4px 0; font-size: 0.8rem; border-radius: 10px; cursor: pointer; }
         .day-cell.active { background: #5c7cfa !important; color: white !important; font-weight: bold; }
         .day-cell.has-data::after { content: ''; display: block; width: 4px; height: 4px; background: #ff6b6b; border-radius: 50%; margin: 1px auto 0; }
         
         /* 입력창 높이 1/2 축소 */
         .input-row { display: flex; gap: 10px; align-items: flex-start; }
-        .photo-area { width: 80px; height: 80px; background: #f8f9fa; border: 2px dashed #ccd0d5; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; flex-shrink: 0; overflow: hidden; position: relative; }
+        .photo-area { width: 70px; height: 70px; background: #f8f9fa; border: 2px dashed #ccd0d5; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 0.6rem; flex-shrink: 0; overflow: hidden; position: relative; }
         .photo-area img { width: 100%; height: 100%; object-fit: cover; }
-        .fields { flex: 1; display: flex; flex-direction: column; gap: 6px; }
-        textarea { width: 100%; border: 1px solid #ddd; border-radius: 10px; padding: 8px; font-size: 0.9rem; height: 45px; resize: none; font-family: inherit; }
-        #fieldTime { width: 100%; border: 1px solid #ddd; border-radius: 8px; padding: 6px; font-size: 0.85rem; background: #fff; }
-        
-        /* 저장 버튼 콤팩트화 */
-        .save-btn { width: 100%; background: #5c7cfa; color: white; border: none; padding: 12px; border-radius: 12px; font-weight: bold; margin-top: 10px; font-size: 0.95rem; }
+        .fields { flex: 1; display: flex; flex-direction: column; gap: 5px; }
+        textarea { width: 100%; border: 1px solid #ddd; border-radius: 10px; padding: 6px; font-size: 0.85rem; height: 40px; resize: none; font-family: inherit; }
+        #fieldTime { width: 100%; border: 1px solid #ddd; border-radius: 8px; padding: 5px; font-size: 0.8rem; background: #fff; }
+        .save-btn { width: 100%; background: #5c7cfa; color: white; border: none; padding: 10px; border-radius: 12px; font-weight: bold; margin-top: 8px; font-size: 0.9rem; }
 
-        /* 리스트 레이아웃 */
-        .feed-card { background: white; border-radius: 20px; margin-bottom: 12px; padding: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-        .feed-content { display: flex; gap: 12px; align-items: flex-start; }
-        .feed-photo { width: 150px; height: 150px; border-radius: 12px; overflow: hidden; position: relative; flex-shrink: 0; background: #eee; }
+        /* 리스트 카드 높이 대폭 축소 */
+        .feed-card { background: white; border-radius: 15px; margin-bottom: 8px; padding: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.03); }
+        .feed-content { display: flex; gap: 10px; align-items: flex-start; }
+        .feed-photo { width: 100px; height: 100px; border-radius: 10px; overflow: hidden; position: relative; flex-shrink: 0; background: #eee; }
         .feed-photo img { width: 100%; height: 100%; object-fit: cover; }
-        .feed-info { flex: 1; display: flex; flex-direction: column; justify-content: space-between; min-height: 150px; padding: 2px 0; }
-        .feed-memo { font-size: 1rem; line-height: 1.4; color: #333; white-space: pre-wrap; }
-        .feed-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; padding-top: 8px; border-top: 1px solid #f1f3f5; width: 100%; }
-        .feed-time-text { font-size: 0.85rem; color: #5c7cfa; font-weight: bold; }
-        .feed-delete-btn { font-size: 0.85rem; color: #ff6b6b; cursor: pointer; padding: 4px; }
+        .feed-info { flex: 1; display: flex; flex-direction: column; justify-content: space-between; min-height: 100px; padding: 0; }
+        .feed-memo { font-size: 0.95rem; line-height: 1.3; color: #333; white-space: pre-wrap; overflow: hidden; text-overflow: ellipsis; }
+        .feed-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; padding-top: 4px; border-top: 1px solid #f8f9fa; width: 100%; }
+        .feed-time-text { font-size: 0.8rem; color: #5c7cfa; font-weight: bold; }
+        .feed-delete-btn { font-size: 0.8rem; color: #ff8787; cursor: pointer; padding: 2px 4px; }
 
         #loadingOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); z-index: 1000; flex-direction: column; justify-content: center; align-items: center; font-weight: bold; color: #5c7cfa; }
     </style>
@@ -51,26 +49,23 @@
         <div class="cal-header"><button class="btn-m" onclick="changeMonth(-1)">◀</button><span id="labelMonth"></span><button class="btn-m" onclick="changeMonth(1)">▶</button></div>
         <div id="gridDays" class="cal-grid"></div>
     </div>
-    
     <div class="card">
         <div class="input-row">
             <div class="photo-area" onclick="document.getElementById('fileIn').click()"><div id="boxPreview">📷 사진</div></div>
             <div class="fields">
                 <input type="datetime-local" id="fieldTime">
-                <textarea id="fieldMemo" placeholder="메모를 입력하세요..."></textarea>
+                <textarea id="fieldMemo" placeholder="메모..."></textarea>
             </div>
         </div>
         <input type="file" id="fileIn" accept="image/*" style="display:none" onchange="onFileChange(this)">
-        <button class="save-btn" id="saveBtn" onclick="onSave()">기록 저장하기</button>
+        <button class="save-btn" id="saveBtn" onclick="onSave()">기록 저장</button>
     </div>
-    
     <div id="listFeed"></div>
 </div>
 
 <script>
     const API_URL = "https://script.google.com/macros/s/AKfycbz6bpDE-ftbwKqmrfp5rrBrzlWFc3EGqJJD02cQ8THBMdehxyYlF3xJ9JIHx7JARcY/exec";
     const DB_KEY = 'MEAL_LOG_V15_OPTIMIZED';
-    
     let mealDB = JSON.parse(localStorage.getItem(DB_KEY) || '{}');
     let calendarDate = new Date();
     let activeDateStr = getFormatDate(new Date());
@@ -153,7 +148,7 @@
     }
 
     async function onDelete(d, id) {
-        if (!confirm("이 기록을 삭제할까요?")) return;
+        if (!confirm("삭제할까요?")) return;
         const targetIdx = mealDB[d].findIndex(x => x.id === id);
         if (targetIdx === -1) return;
         const targetData = mealDB[d][targetIdx];
@@ -184,13 +179,26 @@
         }
         const list = document.getElementById('listFeed');
         const items = mealDB[activeDateStr] || [];
-        let html = `<h3 style="padding: 10px 5px; font-size: 1rem;">📂 ${activeDateStr}</h3>`;
-        if (!items.length) html += '<p style="text-align:center; padding:30px; color:#ccc; font-size:0.9rem;">기록 없음</p>';
+        let html = `<h3 style="padding: 5px; font-size: 0.9rem;">📂 ${activeDateStr}</h3>`;
+        if (!items.length) html += '<p style="text-align:center; padding:20px; color:#ccc; font-size:0.8rem;">기록 없음</p>';
         else {
             items.sort((a,b) => a.time.localeCompare(b.time)).forEach(it => {
                 const hasPhoto = it.imgs && it.imgs.length > 0;
-                let photoHtml = hasPhoto ? `<div class="feed-photo"><img src="${it.imgs[0].data}"></div>` : '';
-                html += `<div class="feed-card"><div class="feed-content">${photoHtml}<div class="feed-info"><div class="feed-memo">${it.memo || ''}</div><div class="feed-footer"><span class="feed-time-text">🕒 ${it.time}</span><span class="feed-delete-btn" onclick="onDelete('${activeDateStr}', ${it.id})">삭제</span></div></div></div></div>`;
+                // 리스트 사진 크기를 100px로 조정하여 카드 높이 축소
+                let photoHtml = hasPhoto ? `<div class="feed-photo" style="width:100px; height:100px;"><img src="${it.imgs[0].data}"></div>` : '';
+                html += `
+                    <div class="feed-card">
+                        <div class="feed-content">
+                            ${photoHtml}
+                            <div class="feed-info" style="min-height: ${hasPhoto ? '100px' : 'auto'};">
+                                <div class="feed-memo" style="font-size:0.9rem;">${it.memo || ''}</div>
+                                <div class="feed-footer">
+                                    <span class="feed-time-text">🕒 ${it.time}</span>
+                                    <span class="feed-delete-btn" onclick="onDelete('${activeDateStr}', ${it.id})">삭제</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>`;
             });
         }
         list.innerHTML = html;
@@ -200,3 +208,4 @@
 </script>
 </body>
 </html>
+
