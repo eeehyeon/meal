@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Meal Log PRO | Silent Sync</title>
+    <title>Meal Log PRO | Unified UI</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exif-js/2.3.0/exif.min.js"></script>
     <style>
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
@@ -35,13 +35,12 @@
         .feed-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; padding-top: 8px; border-top: 1px solid #f1f3f5; width: 100%; }
         .feed-time-text { font-size: 0.85rem; color: #5c7cfa; font-weight: bold; }
         .feed-delete-btn { font-size: 0.85rem; color: #ff6b6b; cursor: pointer; padding: 5px; }
-        .time-stamp { position: absolute; bottom: 5px; right: 5px; background: rgba(0,0,0,0.7); color: white; font-size: 10px; padding: 3px 6px; border-radius: 4px; font-family: monospace; pointer-events: none; text-align: right; }
 
         #loadingOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); z-index: 1000; flex-direction: column; justify-content: center; align-items: center; font-weight: bold; color: #5c7cfa; }
     </style>
 </head>
 <body>
-<div id="loadingOverlay">저장 중...</div>
+<div id="loadingOverlay">작업 중...</div>
 <div class="container">
     <div class="card">
         <div class="cal-header"><button class="btn-m" onclick="changeMonth(-1)">◀</button><span id="labelMonth"></span><button class="btn-m" onclick="changeMonth(1)">▶</button></div>
@@ -112,7 +111,7 @@
                     pDay = getFormatDate(n);
                 }
                 compressImage(e.target.result, function(compressedData) {
-                    tempImgs.push({ data: compressedData, timeStamp: pDay + " " + pTime });
+                    tempImgs.push({ data: compressedData, time: pTime });
                     document.getElementById('boxPreview').innerHTML = `<img src="${compressedData}">`;
                     renderAll();
                 });
@@ -144,59 +143,37 @@
         };
 
         try {
-            await fetch(API_URL, {
-                method: "POST",
-                mode: "no-cors",
-                body: JSON.stringify(payload)
-            });
-            
+            await fetch(API_URL, { method: "POST", mode: "no-cors", body: JSON.stringify(payload) });
             if (!mealDB[dt[0]]) mealDB[dt[0]] = [];
             mealDB[dt[0]].push(record);
             localStorage.setItem(DB_KEY, JSON.stringify(mealDB));
-            
             tempImgs = []; document.getElementById('boxPreview').innerHTML = "📷 사진 추가";
             document.getElementById('fieldMemo').value = "";
             activeDateStr = dt[0]; renderAll();
-        } catch (e) {
-            console.error("Save error", e);
-        } finally {
-            overlay.style.display = 'none';
-            btn.disabled = false;
-        }
+        } catch (e) { console.error(e); }
+        finally { overlay.style.display = 'none'; btn.disabled = false; }
     }
 
     async function onDelete(d, id) {
         if (!confirm("이 기록을 삭제할까요?")) return;
-        
         const targetIdx = mealDB[d].findIndex(x => x.id === id);
         if (targetIdx === -1) return;
-        
         const targetData = mealDB[d][targetIdx];
         const overlay = document.getElementById('loadingOverlay');
         overlay.innerText = "삭제 중...";
         overlay.style.display = 'flex';
-
         try {
             await fetch(API_URL, {
                 method: "POST",
                 mode: "no-cors",
-                body: JSON.stringify({
-                    action: "delete",
-                    date: d,
-                    time: targetData.time,
-                    memo: targetData.memo
-                })
+                body: JSON.stringify({ action: "delete", date: d, time: targetData.time, memo: targetData.memo })
             });
-
             mealDB[d].splice(targetIdx, 1);
             if (!mealDB[d].length) delete mealDB[d];
             localStorage.setItem(DB_KEY, JSON.stringify(mealDB));
             renderAll();
-        } catch (e) {
-            console.error("Delete error", e);
-        } finally {
-            overlay.style.display = 'none';
-        }
+        } catch (e) { console.error(e); }
+        finally { overlay.style.display = 'none'; }
     }
 
     function renderAll() {
@@ -219,11 +196,7 @@
         else {
             items.sort((a,b) => a.time.localeCompare(b.time)).forEach(it => {
                 const hasPhoto = it.imgs && it.imgs.length > 0;
-                let photoHtml = '';
-                if (hasPhoto) {
-                    const im = it.imgs[0];
-                    photoHtml = `<div class="feed-photo"><img src="${im.data}"><span class="time-stamp">${im.timeStamp.split(' ')[1]}</span></div>`;
-                }
+                let photoHtml = hasPhoto ? `<div class="feed-photo"><img src="${it.imgs[0].data}"></div>` : '';
                 html += `
                     <div class="feed-card">
                         <div class="feed-content">
@@ -231,7 +204,7 @@
                             <div class="feed-info">
                                 <div class="feed-memo">${it.memo || ''}</div>
                                 <div class="feed-footer">
-                                    <span class="feed-time-text">${hasPhoto ? '' : '🕒 ' + it.time}</span>
+                                    <span class="feed-time-text">🕒 ${it.time}</span>
                                     <span class="feed-delete-btn" onclick="onDelete('${activeDateStr}', ${it.id})">삭제</span>
                                 </div>
                             </div>
