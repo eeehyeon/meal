@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Meal Log PRO | Display Optimized</title>
+    <title>Meal Log PRO | Lite</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exif-js/2.3.0/exif.min.js"></script>
     <style>
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
@@ -33,7 +33,7 @@
         .time-stamp { position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.7); color: white; font-size: 9px; padding: 3px 5px; border-radius: 4px; font-family: monospace; line-height: 1.2; text-align: right; pointer-events: none; }
         .feed-body { padding: 18px; }
         .feed-time-info { font-size: 0.9rem; color: #5c7cfa; font-weight: bold; margin-bottom: 8px; display: block; }
-        .feed-ctrl { display: flex; gap: 25px; font-size: 0.9rem; color: #999; border-top: 1px solid #f1f3f5; padding-top: 12px; margin-top: 12px; }
+        .feed-ctrl { display: flex; justify-content: flex-end; font-size: 0.85rem; color: #ff6b6b; border-top: 1px solid #f1f3f5; padding-top: 12px; margin-top: 12px; }
     </style>
 </head>
 <body>
@@ -146,7 +146,7 @@
                 activeDateStr = targetDate; calendarDate = new Date(targetDate);
                 renderAll();
             } catch(e) {
-                alert("창고 부족! 백업 후 정리해주세요.");
+                alert("공간 부족! 백업 후 정리해주세요.");
                 mealDB[targetDate].pop();
             }
             btn.disabled = false; btn.innerText = "오늘의 기록 저장하기";
@@ -174,21 +174,20 @@
             items.sort((a,b) => a.time.localeCompare(b.time)).forEach(it => {
                 let g = ''; 
                 const hasPhoto = it.imgs && it.imgs.length > 0;
-                
                 if (hasPhoto) {
                     g = '<div class="img-grid">';
                     it.imgs.forEach(im => g += `<div class="grid-item"><img src="${im.data}"><span class="time-stamp">${im.timeStamp.replace(' ', '<br>')}</span></div>`);
                     g += '</div>';
                 }
-
-                // 사진이 없을 때만 '🕒 기록시간: 11:36' 텍스트를 보여줌
                 const timeInfoHtml = hasPhoto ? '' : `<div class="feed-time-info">🕒 기록시간: ${it.time}</div>`;
 
-                html += `<div class="feed-card">${g}<div class="feed-body">
+                html += `
+                    <div class="feed-card">${g}<div class="feed-body">
                     ${timeInfoHtml}
                     <div>${it.memo || ''}</div>
-                    <div class="feed-ctrl"><span onclick="onEdit('${activeDateStr}', ${it.id})">수정</span>
-                    <span onclick="onDelete('${activeDateStr}', ${it.id})" style="color:#ff6b6b">삭제</span></div></div></div>`;
+                    <div class="feed-ctrl">
+                        <span onclick="onDelete('${activeDateStr}', ${it.id})" style="cursor:pointer">삭제하기</span>
+                    </div></div></div>`;
             });
         }
         list.innerHTML = html;
@@ -204,19 +203,11 @@
     }
 
     function onDelete(d, id) {
-        if (!confirm("삭제할까요?")) return;
+        if (!confirm("이 기록을 삭제할까요?")) return;
         mealDB[d] = mealDB[d].filter(x => x.id !== id);
         if (!mealDB[d].length) delete mealDB[d];
         localStorage.setItem(DB_KEY, JSON.stringify(mealDB));
         renderAll();
-    }
-
-    function onEdit(d, id) {
-        const it = mealDB[d].find(x => x.id === id);
-        activeDateStr = d; document.getElementById('fieldMemo').value = it.memo;
-        document.getElementById('fieldTime').value = d + "T" + it.time;
-        tempImgs = it.imgs || []; if (tempImgs.length) document.getElementById('boxPreview').innerHTML = `<img src="${tempImgs[0].data}">`;
-        onDelete(d, id); window.scrollTo(0,0);
     }
 
     function changeMonth(v) { calendarDate.setMonth(calendarDate.getMonth() + v); renderAll(); }
