@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Meal Log Final</title>
+    <title>Meal Log PRO | Storage Optimized</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exif-js/2.3.0/exif.min.js"></script>
     <style>
+        /* 기존 디자인 스타일 유지 */
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
         body { font-family: -apple-system, sans-serif; background: #f0f2f5; color: #222; padding: 10px; }
         .container { max-width: 500px; margin: 0 auto; }
@@ -21,7 +22,7 @@
         .photo-area { width: 100px; height: 100px; background: #f8f9fa; border: 2px dashed #ccd0d5; border-radius: 15px; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; flex-shrink: 0; overflow: hidden; position: relative; }
         .photo-area img { width: 100%; height: 100%; object-fit: cover; }
         .fields { flex: 1; display: flex; flex-direction: column; gap: 8px; }
-        textarea { width: 100%; border: 1px solid #ddd; border-radius: 12px; padding: 12px; font-size: 1rem; height: 60px; resize: none; font-family: inherit; }
+        textarea { width: 100%; border: 1px solid #ddd; border-radius: 12px; padding: 12px; font-size: 1rem; height: 60px; resize: none; }
         #fieldTime { width: 100%; border: 1px solid #ddd; border-radius: 10px; padding: 10px; font-size: 0.9rem; background: #fff; }
         .save-btn { width: 100%; background: #5c7cfa; color: white; border: none; padding: 18px; border-radius: 15px; font-weight: bold; margin-top: 15px; font-size: 1.1rem; }
         .feed-card { background: white; border-radius: 20px; margin-bottom: 20px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
@@ -46,21 +47,21 @@
             <div class="fields"><input type="datetime-local" id="fieldTime"><textarea id="fieldMemo" placeholder="식단 메모..."></textarea></div>
         </div>
         <input type="file" id="fileIn" multiple accept="image/*" style="display:none" onchange="onFileChange(this)">
-        <button class="save-btn" onclick="onSave()">오늘의 기록 저장하기</button>
+        <button class="save-btn" id="saveBtn" onclick="onSave()">오늘의 기록 저장하기</button>
     </div>
     <div id="listFeed"></div>
 </div>
+
 <script>
-    const DB_KEY = 'MEAL_LOG_V14_FINAL';
+    const DB_KEY = 'MEAL_LOG_V15_OPTIMIZED';
     let mealDB = JSON.parse(localStorage.getItem(DB_KEY) || '{}');
     let calendarDate = new Date();
     let activeDateStr = "";
     let tempImgs = [];
 
     window.onload = function() {
-        const now = new Date();
-        activeDateStr = getFormatDate(now);
-        initTimeField(now);
+        activeDateStr = getFormatDate(new Date());
+        initTimeField(new Date());
         renderAll();
     };
 
@@ -74,6 +75,28 @@
         return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, '0') + "-" + String(d.getDate()).padStart(2, '0');
     }
 
+    // 사진 용량 압축 함수 (Canvas 활용)
+    function compressImage(imgSrc, callback) {
+        const img = new Image();
+        img.onload = function() {
+            const canvas = document.createElement('canvas');
+            const MAX_WIDTH = 800; // 가로 최대 800px로 압축
+            let width = img.width;
+            let height = img.height;
+
+            if (width > MAX_WIDTH) {
+                height *= MAX_WIDTH / width;
+                width = MAX_WIDTH;
+            }
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            callback(canvas.toDataURL('image/jpeg', 0.7)); // 70% 화질로 압축
+        };
+        img.src = imgSrc;
+    }
+
     function onFileChange(input) {
         tempImgs = []; const files = input.files; if (!files.length) return;
         let loaded = 0;
@@ -83,25 +106,27 @@
                 reader.onload = function(e) {
                     EXIF.getData(file, function() {
                         const dt = EXIF.getTag(this, "DateTimeOriginal");
-                        let pDay = ""; let pTime = ""; let pFull = "";
+                        let pDay = "", pTime = "", pFull = "";
                         if (dt) {
                             const p = dt.split(" ");
                             pDay = p[0].replace(/:/g, "-");
                             pTime = p[1].substring(0, 5);
                             pFull = pDay + " " + pTime;
                             if (idx === 0) {
-                                activeDateStr = pDay;
-                                calendarDate = new Date(pDay);
+                                activeDateStr = pDay; calendarDate = new Date(pDay);
                                 document.getElementById('fieldTime').value = pDay + "T" + pTime;
                             }
                         } else {
-                            const n = new Date();
-                            pTime = String(n.getHours()).padStart(2, '0') + ":" + String(n.getMinutes()).padStart(2, '0');
+                            const n = new Date(); pTime = String(n.getHours()).padStart(2, '0') + ":" + String(n.getMinutes()).padStart(2, '0');
                             pFull = getFormatDate(n) + " " + pTime;
                         }
-                        tempImgs.push({ data: e.target.result, timeStamp: pFull, timeOnly: pTime });
-                        if (idx === 0) document.getElementById('boxPreview').innerHTML = `<img src="${e.target.result}">`;
-                        loaded++; if (loaded === files.length) renderAll();
+                        
+                        // 압축 후 임시 저장
+                        compressImage(e.target.result, function(compressedData) {
+                            tempImgs.push({ data: compressedData, timeStamp: pFull, timeOnly: pTime });
+                            if (idx === 0) document.getElementById('boxPreview').innerHTML = `<img src="${compressedData}">`;
+                            loaded++; if (loaded === files.length) renderAll();
+                        });
                     });
                 };
                 reader.readAsDataURL(file);
@@ -110,8 +135,13 @@
     }
 
     function onSave() {
+        const btn = document.getElementById('saveBtn');
         const fTime = document.getElementById('fieldTime').value;
-        if (!fTime) return;
+        if (!fTime || btn.disabled) return;
+        
+        btn.disabled = true;
+        btn.innerText = "저장 중...";
+
         const dt = fTime.split("T");
         const targetDate = dt[0];
         const record = { id: Date.now(), time: dt[1], memo: document.getElementById('fieldMemo').value, imgs: tempImgs };
@@ -119,18 +149,23 @@
         if (!mealDB[targetDate]) mealDB[targetDate] = [];
         mealDB[targetDate].push(record);
 
-        try {
-            localStorage.setItem(DB_KEY, JSON.stringify(mealDB));
-            alert(targetDate + "에 기록되었습니다!");
-            tempImgs = [];
-            document.getElementById('boxPreview').innerHTML = "📷 사진 추가";
-            document.getElementById('fieldMemo').value = "";
-            activeDateStr = targetDate;
-            calendarDate = new Date(targetDate);
-            renderAll();
-        } catch(e) {
-            alert("저장 실패! 주소가 'http'로 시작하는지 확인하거나 서버 앱을 사용해 주세요.");
-        }
+        setTimeout(() => {
+            try {
+                localStorage.setItem(DB_KEY, JSON.stringify(mealDB));
+                alert(targetDate + "에 성공적으로 저장되었습니다!");
+                tempImgs = [];
+                document.getElementById('boxPreview').innerHTML = "📷 사진 추가";
+                document.getElementById('fieldMemo').value = "";
+                activeDateStr = targetDate;
+                calendarDate = new Date(targetDate);
+                renderAll();
+            } catch(e) {
+                alert("저장 공간이 부족합니다. 이전 기록을 삭제하거나 데이터 백업 후 정리가 필요합니다.");
+                mealDB[targetDate].pop(); // 실패한 데이터 롤백
+            }
+            btn.disabled = false;
+            btn.innerText = "오늘의 기록 저장하기";
+        }, 100);
     }
 
     function renderAll() {
@@ -173,13 +208,10 @@
 
     function onEdit(d, id) {
         const it = mealDB[d].find(x => x.id === id);
-        activeDateStr = d;
-        document.getElementById('fieldMemo').value = it.memo;
+        activeDateStr = d; document.getElementById('fieldMemo').value = it.memo;
         document.getElementById('fieldTime').value = d + "T" + it.time;
-        tempImgs = it.imgs || [];
-        if (tempImgs.length) document.getElementById('boxPreview').innerHTML = `<img src="${tempImgs[0].data}">`;
-        onDelete(d, id);
-        window.scrollTo(0,0);
+        tempImgs = it.imgs || []; if (tempImgs.length) document.getElementById('boxPreview').innerHTML = `<img src="${tempImgs[0].data}">`;
+        onDelete(d, id); window.scrollTo(0,0);
     }
 
     function changeMonth(v) { calendarDate.setMonth(calendarDate.getMonth() + v); renderAll(); }
