@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Meal Log PRO | Final Layout</title>
+    <title>Meal Log PRO | Cloud</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exif-js/2.3.0/exif.min.js"></script>
     <style>
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
@@ -14,11 +14,8 @@
         .btn-m { padding: 8px 15px; background: #f1f3f5; border-radius: 10px; border: none; cursor: pointer; }
         .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; }
         .cal-grid div { padding: 12px 0; font-size: 0.95rem; border-radius: 12px; cursor: pointer; }
-        .weekday { color: #aaa; font-size: 0.75rem !important; font-weight: bold; pointer-events: none; }
         .day-cell.active { background: #5c7cfa !important; color: white !important; font-weight: bold; }
         .day-cell.has-data::after { content: ''; display: block; width: 5px; height: 5px; background: #ff6b6b; border-radius: 50%; margin: 2px auto 0; }
-        
-        /* 입력 영역 */
         .input-row { display: flex; gap: 12px; align-items: flex-start; }
         .photo-area { width: 100px; height: 100px; background: #f8f9fa; border: 2px dashed #ccd0d5; border-radius: 15px; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; flex-shrink: 0; overflow: hidden; position: relative; }
         .photo-area img { width: 100%; height: 100%; object-fit: cover; }
@@ -26,31 +23,21 @@
         textarea { width: 100%; border: 1px solid #ddd; border-radius: 12px; padding: 12px; font-size: 1rem; height: 60px; resize: none; font-family: inherit; }
         #fieldTime { width: 100%; border: 1px solid #ddd; border-radius: 10px; padding: 10px; font-size: 0.9rem; background: #fff; }
         .save-btn { width: 100%; background: #5c7cfa; color: white; border: none; padding: 18px; border-radius: 15px; font-weight: bold; margin-top: 15px; font-size: 1.1rem; }
-
-        /* 피드 카드 (사진 1.5배 확대 및 가로 배치) */
         .feed-card { background: white; border-radius: 20px; margin-bottom: 15px; padding: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-        .feed-content { display: flex; gap: 12px; align-items: center; }
-        
-        /* 사진 크기 100px -> 150px (1.5배) */
+        .feed-content { display: flex; gap: 12px; align-items: flex-start; }
         .feed-photo { width: 150px; height: 150px; border-radius: 12px; overflow: hidden; position: relative; flex-shrink: 0; background: #eee; }
         .feed-photo img { width: 100%; height: 100%; object-fit: cover; }
-        
-        .feed-info { flex: 1; display: flex; flex-direction: column; justify-content: space-between; height: 150px; padding: 5px 0; }
-        .feed-memo { font-size: 1rem; line-height: 1.4; color: #333; overflow-wrap: break-word; }
-        
-        /* 하단바: 시간(좌) / 삭제(우) */
-        .feed-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; padding-top: 8px; border-top: 1px solid #f1f3f5; }
+        .feed-info { flex: 1; display: flex; flex-direction: column; justify-content: space-between; min-height: 150px; padding: 2px 0; }
+        .feed-memo { font-size: 1rem; line-height: 1.4; color: #333; white-space: pre-wrap; }
+        .feed-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; padding-top: 8px; border-top: 1px solid #f1f3f5; width: 100%; }
         .feed-time-text { font-size: 0.85rem; color: #5c7cfa; font-weight: bold; }
         .feed-delete-btn { font-size: 0.85rem; color: #ff6b6b; cursor: pointer; padding: 5px; }
-
-        /* 사진 위 타임스탬프 */
         .time-stamp { position: absolute; bottom: 5px; right: 5px; background: rgba(0,0,0,0.7); color: white; font-size: 10px; padding: 3px 6px; border-radius: 4px; font-family: monospace; pointer-events: none; text-align: right; }
-
-        .backup-section { margin-top: 30px; text-align: center; }
-        .backup-btn { background: #fff; border: 1px solid #dee2e6; color: #666; padding: 12px 20px; border-radius: 12px; font-size: 0.85rem; }
+        #loadingOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); z-index: 1000; justify-content: center; align-items: center; font-weight: bold; }
     </style>
 </head>
 <body>
+<div id="loadingOverlay">구글 시트로 전송 중...</div>
 <div class="container">
     <div class="card">
         <div class="cal-header"><button class="btn-m" onclick="changeMonth(-1)">◀</button><span id="labelMonth"></span><button class="btn-m" onclick="changeMonth(1)">▶</button></div>
@@ -65,11 +52,13 @@
         <button class="save-btn" id="saveBtn" onclick="onSave()">오늘의 기록 저장하기</button>
     </div>
     <div id="listFeed"></div>
-    <div class="backup-section"><button class="backup-btn" onclick="exportData()">💾 데이터 백업 저장</button></div>
 </div>
 
 <script>
+    // 사용자님의 구글 웹 앱 URL 연결
+    const API_URL = "https://script.google.com/macros/s/AKfycbz6bpDE-ftbwKqmrfp5rrBrzlWFc3EGqJJD02cQ8THBMdehxyYlF3xJ9JIHx7JARcY/exec";
     const DB_KEY = 'MEAL_LOG_V15_OPTIMIZED';
+    
     let mealDB = JSON.parse(localStorage.getItem(DB_KEY) || '{}');
     let calendarDate = new Date();
     let activeDateStr = getFormatDate(new Date());
@@ -91,13 +80,14 @@
         const img = new Image();
         img.onload = function() {
             const canvas = document.createElement('canvas');
-            const MAX_WIDTH = 800;
-            let width = img.width; let height = img.height;
-            if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
+            const MAX_SIZE = 600;
+            let width = img.width, height = img.height;
+            if (width > height) { if (width > MAX_SIZE) { height *= MAX_SIZE / width; width = MAX_SIZE; } }
+            else { if (height > MAX_SIZE) { width *= MAX_SIZE / height; height = MAX_SIZE; } }
             canvas.width = width; canvas.height = height;
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, width, height);
-            callback(canvas.toDataURL('image/jpeg', 0.7));
+            callback(canvas.toDataURL('image/jpeg', 0.5));
         };
         img.src = imgSrc;
     }
@@ -108,18 +98,18 @@
         reader.onload = function(e) {
             EXIF.getData(file, function() {
                 const dt = EXIF.getTag(this, "DateTimeOriginal");
-                let pDay = "", pTime = "", pFull = "";
+                let pDay = "", pTime = "";
                 if (dt) {
                     const p = dt.split(" ");
-                    pDay = p[0].replace(/:/g, "-"); pTime = p[1].substring(0, 5); pFull = pDay + " " + pTime;
+                    pDay = p[0].replace(/:/g, "-"); pTime = p[1].substring(0, 5);
                     activeDateStr = pDay; calendarDate = new Date(pDay);
                     document.getElementById('fieldTime').value = pDay + "T" + pTime;
                 } else {
                     const n = new Date(); pTime = String(n.getHours()).padStart(2, '0') + ":" + String(n.getMinutes()).padStart(2, '0');
-                    pFull = getFormatDate(n) + " " + pTime;
+                    pDay = getFormatDate(n);
                 }
                 compressImage(e.target.result, function(compressedData) {
-                    tempImgs.push({ data: compressedData, timeStamp: pFull, timeOnly: pTime });
+                    tempImgs.push({ data: compressedData, timeStamp: pDay + " " + pTime });
                     document.getElementById('boxPreview').innerHTML = `<img src="${compressedData}">`;
                     renderAll();
                 });
@@ -128,25 +118,47 @@
         reader.readAsDataURL(file);
     }
 
-    function onSave() {
+    async function onSave() {
         const btn = document.getElementById('saveBtn');
         const fTime = document.getElementById('fieldTime').value;
+        const memo = document.getElementById('fieldMemo').value;
         if (!fTime || btn.disabled) return;
-        btn.disabled = true; btn.innerText = "저장 중...";
+
         const dt = fTime.split("T");
-        const record = { id: Date.now(), time: dt[1], memo: document.getElementById('fieldMemo').value, imgs: tempImgs };
+        const record = { id: Date.now(), time: dt[1], memo: memo, imgs: tempImgs };
+        
+        // 1. 브라우저에 임시 저장 (오프라인 대비 및 빠른 화면 업데이트)
         if (!mealDB[dt[0]]) mealDB[dt[0]] = [];
         mealDB[dt[0]].push(record);
-        setTimeout(() => {
-            try {
-                localStorage.setItem(DB_KEY, JSON.stringify(mealDB));
-                alert(dt[0] + " 기록 완료!");
-                tempImgs = []; document.getElementById('boxPreview').innerHTML = "📷 사진 추가";
-                document.getElementById('fieldMemo').value = "";
-                activeDateStr = dt[0]; calendarDate = new Date(dt[0]); renderAll();
-            } catch(e) { alert("공간 부족!"); mealDB[dt[0]].pop(); }
-            btn.disabled = false; btn.innerText = "오늘의 기록 저장하기";
-        }, 100);
+        localStorage.setItem(DB_KEY, JSON.stringify(mealDB));
+
+        // 2. 구글 시트로 영구 전송
+        document.getElementById('loadingOverlay').style.display = 'flex';
+        btn.disabled = true;
+
+        const payload = {
+            date: dt[0],
+            time: dt[1],
+            memo: memo,
+            image: tempImgs.length > 0 ? tempImgs[0].data : ""
+        };
+
+        try {
+            await fetch(API_URL, {
+                method: "POST",
+                mode: "no-cors", // 브라우저 보안 정책 대응
+                body: JSON.stringify(payload)
+            });
+            alert("구글 시트에 안전하게 기록되었습니다!");
+        } catch (e) {
+            alert("시트 전송 실패 (기기는 저장됨)");
+        } finally {
+            document.getElementById('loadingOverlay').style.display = 'none';
+            btn.disabled = false;
+            tempImgs = []; document.getElementById('boxPreview').innerHTML = "📷 사진 추가";
+            document.getElementById('fieldMemo').value = "";
+            activeDateStr = dt[0]; renderAll();
+        }
     }
 
     function renderAll() {
@@ -172,36 +184,16 @@
                 let photoHtml = '';
                 if (hasPhoto) {
                     const im = it.imgs[0];
-                    photoHtml = `<div class="feed-photo"><img src="${im.data}"><span class="time-stamp">${im.timeStamp.replace(' ', '<br>')}</span></div>`;
+                    photoHtml = `<div class="feed-photo"><img src="${im.data}"><span class="time-stamp">${im.timeStamp.split(' ')[1]}</span></div>`;
                 }
-
-                html += `
-                    <div class="feed-card">
-                        <div class="feed-content">
-                            ${photoHtml}
-                            <div class="feed-info">
-                                <div class="feed-memo">${it.memo || ''}</div>
-                                <div class="feed-footer">
-                                    <span class="feed-time-text">${hasPhoto ? '' : '🕒 ' + it.time}</span>
-                                    <span class="feed-delete-btn" onclick="onDelete('${activeDateStr}', ${it.id})">삭제</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>`;
+                html += `<div class="feed-card"><div class="feed-content">${photoHtml}<div class="feed-info"><div class="feed-memo">${it.memo || ''}</div><div class="feed-footer"><span class="feed-time-text">${hasPhoto ? '' : '🕒 ' + it.time}</span><span class="feed-delete-btn" onclick="onDelete('${activeDateStr}', ${it.id})">삭제</span></div></div></div></div>`;
             });
         }
         list.innerHTML = html;
     }
 
-    function exportData() {
-        if (!Object.keys(mealDB).length) return;
-        const blob = new Blob([JSON.stringify(mealDB)], {type: "application/json"});
-        const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-        a.download = `meal_log_backup.json`; a.click();
-    }
-
     function onDelete(d, id) {
-        if (confirm("이 기록을 삭제할까요?")) {
+        if (confirm("이 기록을 삭제할까요? (브라우저에서만 삭제됩니다)")) {
             mealDB[d] = mealDB[d].filter(x => x.id !== id);
             if (!mealDB[d].length) delete mealDB[d];
             localStorage.setItem(DB_KEY, JSON.stringify(mealDB)); renderAll();
