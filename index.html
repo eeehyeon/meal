@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Meal Log PRO | Final UI</title>
+    <title>Meal Log PRO | Final Layout</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exif-js/2.3.0/exif.min.js"></script>
     <style>
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
@@ -17,6 +17,8 @@
         .weekday { color: #aaa; font-size: 0.75rem !important; font-weight: bold; pointer-events: none; }
         .day-cell.active { background: #5c7cfa !important; color: white !important; font-weight: bold; }
         .day-cell.has-data::after { content: ''; display: block; width: 5px; height: 5px; background: #ff6b6b; border-radius: 50%; margin: 2px auto 0; }
+        
+        /* 입력 영역 */
         .input-row { display: flex; gap: 12px; align-items: flex-start; }
         .photo-area { width: 100px; height: 100px; background: #f8f9fa; border: 2px dashed #ccd0d5; border-radius: 15px; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; flex-shrink: 0; overflow: hidden; position: relative; }
         .photo-area img { width: 100%; height: 100%; object-fit: cover; }
@@ -24,20 +26,28 @@
         textarea { width: 100%; border: 1px solid #ddd; border-radius: 12px; padding: 12px; font-size: 1rem; height: 60px; resize: none; font-family: inherit; }
         #fieldTime { width: 100%; border: 1px solid #ddd; border-radius: 10px; padding: 10px; font-size: 0.9rem; background: #fff; }
         .save-btn { width: 100%; background: #5c7cfa; color: white; border: none; padding: 18px; border-radius: 15px; font-weight: bold; margin-top: 15px; font-size: 1.1rem; }
-        .feed-card { background: white; border-radius: 20px; margin-bottom: 20px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-        .img-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; background: #eee; }
-        .grid-item { aspect-ratio: 1/1; position: relative; overflow: hidden; }
-        .grid-item img { width: 100%; height: 100%; object-fit: cover; }
-        .time-stamp { position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.7); color: white; font-size: 9px; padding: 3px 5px; border-radius: 4px; font-family: monospace; line-height: 1.2; text-align: right; pointer-events: none; }
-        .feed-body { padding: 18px; }
-        
-        /* 하단 컨트롤 바 정렬 */
-        .feed-ctrl { display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; border-top: 1px solid #f1f3f5; padding-top: 12px; margin-top: 12px; }
-        .feed-time-text { color: #5c7cfa; font-weight: bold; }
-        .feed-delete-text { color: #ff6b6b; cursor: pointer; }
 
-        .backup-section { margin-top: 30px; text-align: center; padding: 10px; }
-        .backup-btn { background: #fff; border: 1px solid #dee2e6; color: #666; padding: 12px 20px; border-radius: 12px; font-size: 0.85rem; cursor: pointer; }
+        /* 피드 카드 (사진 1.5배 확대 및 가로 배치) */
+        .feed-card { background: white; border-radius: 20px; margin-bottom: 15px; padding: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .feed-content { display: flex; gap: 12px; align-items: center; }
+        
+        /* 사진 크기 100px -> 150px (1.5배) */
+        .feed-photo { width: 150px; height: 150px; border-radius: 12px; overflow: hidden; position: relative; flex-shrink: 0; background: #eee; }
+        .feed-photo img { width: 100%; height: 100%; object-fit: cover; }
+        
+        .feed-info { flex: 1; display: flex; flex-direction: column; justify-content: space-between; height: 150px; padding: 5px 0; }
+        .feed-memo { font-size: 1rem; line-height: 1.4; color: #333; overflow-wrap: break-word; }
+        
+        /* 하단바: 시간(좌) / 삭제(우) */
+        .feed-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; padding-top: 8px; border-top: 1px solid #f1f3f5; }
+        .feed-time-text { font-size: 0.85rem; color: #5c7cfa; font-weight: bold; }
+        .feed-delete-btn { font-size: 0.85rem; color: #ff6b6b; cursor: pointer; padding: 5px; }
+
+        /* 사진 위 타임스탬프 */
+        .time-stamp { position: absolute; bottom: 5px; right: 5px; background: rgba(0,0,0,0.7); color: white; font-size: 10px; padding: 3px 6px; border-radius: 4px; font-family: monospace; pointer-events: none; text-align: right; }
+
+        .backup-section { margin-top: 30px; text-align: center; }
+        .backup-btn { background: #fff; border: 1px solid #dee2e6; color: #666; padding: 12px 20px; border-radius: 12px; font-size: 0.85rem; }
     </style>
 </head>
 <body>
@@ -51,27 +61,21 @@
             <div class="photo-area" onclick="document.getElementById('fileIn').click()"><div id="boxPreview">📷 사진 추가</div></div>
             <div class="fields"><input type="datetime-local" id="fieldTime"><textarea id="fieldMemo" placeholder="식단 메모..."></textarea></div>
         </div>
-        <input type="file" id="fileIn" multiple accept="image/*" style="display:none" onchange="onFileChange(this)">
+        <input type="file" id="fileIn" accept="image/*" style="display:none" onchange="onFileChange(this)">
         <button class="save-btn" id="saveBtn" onclick="onSave()">오늘의 기록 저장하기</button>
     </div>
     <div id="listFeed"></div>
-    <div class="backup-section">
-        <button class="backup-btn" onclick="exportData()">💾 전체 데이터 백업 파일 저장</button>
-    </div>
+    <div class="backup-section"><button class="backup-btn" onclick="exportData()">💾 데이터 백업 저장</button></div>
 </div>
 
 <script>
     const DB_KEY = 'MEAL_LOG_V15_OPTIMIZED';
     let mealDB = JSON.parse(localStorage.getItem(DB_KEY) || '{}');
     let calendarDate = new Date();
-    let activeDateStr = "";
+    let activeDateStr = getFormatDate(new Date());
     let tempImgs = [];
 
-    window.onload = function() {
-        activeDateStr = getFormatDate(new Date());
-        initTimeField(new Date());
-        renderAll();
-    };
+    window.onload = function() { initTimeField(new Date()); renderAll(); };
 
     function initTimeField(date) {
         const off = date.getTimezoneOffset() * 60000;
@@ -99,36 +103,29 @@
     }
 
     function onFileChange(input) {
-        tempImgs = []; const files = input.files; if (!files.length) return;
-        let loaded = 0;
-        for (let i = 0; i < files.length; i++) {
-            (function(file, idx) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    EXIF.getData(file, function() {
-                        const dt = EXIF.getTag(this, "DateTimeOriginal");
-                        let pDay = "", pTime = "", pFull = "";
-                        if (dt) {
-                            const p = dt.split(" ");
-                            pDay = p[0].replace(/:/g, "-"); pTime = p[1].substring(0, 5); pFull = pDay + " " + pTime;
-                            if (idx === 0) {
-                                activeDateStr = pDay; calendarDate = new Date(pDay);
-                                document.getElementById('fieldTime').value = pDay + "T" + pTime;
-                            }
-                        } else {
-                            const n = new Date(); pTime = String(n.getHours()).padStart(2, '0') + ":" + String(n.getMinutes()).padStart(2, '0');
-                            pFull = getFormatDate(n) + " " + pTime;
-                        }
-                        compressImage(e.target.result, function(compressedData) {
-                            tempImgs.push({ data: compressedData, timeStamp: pFull, timeOnly: pTime });
-                            if (idx === 0) document.getElementById('boxPreview').innerHTML = `<img src="${compressedData}">`;
-                            loaded++; if (loaded === files.length) renderAll();
-                        });
-                    });
-                };
-                reader.readAsDataURL(file);
-            })(files[i], i);
-        }
+        tempImgs = []; const file = input.files[0]; if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            EXIF.getData(file, function() {
+                const dt = EXIF.getTag(this, "DateTimeOriginal");
+                let pDay = "", pTime = "", pFull = "";
+                if (dt) {
+                    const p = dt.split(" ");
+                    pDay = p[0].replace(/:/g, "-"); pTime = p[1].substring(0, 5); pFull = pDay + " " + pTime;
+                    activeDateStr = pDay; calendarDate = new Date(pDay);
+                    document.getElementById('fieldTime').value = pDay + "T" + pTime;
+                } else {
+                    const n = new Date(); pTime = String(n.getHours()).padStart(2, '0') + ":" + String(n.getMinutes()).padStart(2, '0');
+                    pFull = getFormatDate(n) + " " + pTime;
+                }
+                compressImage(e.target.result, function(compressedData) {
+                    tempImgs.push({ data: compressedData, timeStamp: pFull, timeOnly: pTime });
+                    document.getElementById('boxPreview').innerHTML = `<img src="${compressedData}">`;
+                    renderAll();
+                });
+            });
+        };
+        reader.readAsDataURL(file);
     }
 
     function onSave() {
@@ -146,9 +143,8 @@
                 alert(dt[0] + " 기록 완료!");
                 tempImgs = []; document.getElementById('boxPreview').innerHTML = "📷 사진 추가";
                 document.getElementById('fieldMemo').value = "";
-                activeDateStr = dt[0]; calendarDate = new Date(dt[0]);
-                renderAll();
-            } catch(e) { alert("저장 공간 부족!"); mealDB[dt[0]].pop(); }
+                activeDateStr = dt[0]; calendarDate = new Date(dt[0]); renderAll();
+            } catch(e) { alert("공간 부족!"); mealDB[dt[0]].pop(); }
             btn.disabled = false; btn.innerText = "오늘의 기록 저장하기";
         }, 100);
     }
@@ -172,41 +168,44 @@
         if (!items.length) html += '<p style="text-align:center; padding:50px; color:#ccc;">기록 없음</p>';
         else {
             items.sort((a,b) => a.time.localeCompare(b.time)).forEach(it => {
-                let g = ''; const hasPhoto = it.imgs && it.imgs.length > 0;
+                const hasPhoto = it.imgs && it.imgs.length > 0;
+                let photoHtml = '';
                 if (hasPhoto) {
-                    g = '<div class="img-grid">';
-                    it.imgs.forEach(im => g += `<div class="grid-item"><img src="${im.data}"><span class="time-stamp">${im.timeStamp.replace(' ', '<br>')}</span></div>`);
-                    g += '</div>';
+                    const im = it.imgs[0];
+                    photoHtml = `<div class="feed-photo"><img src="${im.data}"><span class="time-stamp">${im.timeStamp.replace(' ', '<br>')}</span></div>`;
                 }
-                // 사진이 없을 때만 텍스트 시간을 추가, 사진이 있어도 하단바 왼쪽에는 시간을 배치
-                const timeLabel = hasPhoto ? '' : `<span class="feed-time-text">🕒 ${it.time}</span>`;
 
                 html += `
-                    <div class="feed-card">${g}<div class="feed-body">
-                    <div>${it.memo || ''}</div>
-                    <div class="feed-ctrl">
-                        <span class="feed-time-text">${hasPhoto ? '' : '🕒 ' + it.time}</span>
-                        <span class="feed-delete-text" onclick="onDelete('${activeDateStr}', ${it.id})">삭제하기</span>
-                    </div></div></div>`;
+                    <div class="feed-card">
+                        <div class="feed-content">
+                            ${photoHtml}
+                            <div class="feed-info">
+                                <div class="feed-memo">${it.memo || ''}</div>
+                                <div class="feed-footer">
+                                    <span class="feed-time-text">${hasPhoto ? '' : '🕒 ' + it.time}</span>
+                                    <span class="feed-delete-btn" onclick="onDelete('${activeDateStr}', ${it.id})">삭제</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>`;
             });
         }
         list.innerHTML = html;
     }
 
     function exportData() {
-        if (Object.keys(mealDB).length === 0) return;
+        if (!Object.keys(mealDB).length) return;
         const blob = new Blob([JSON.stringify(mealDB)], {type: "application/json"});
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url; a.download = `meal_log_backup_${getFormatDate(new Date())}.json`;
-        document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+        a.download = `meal_log_backup.json`; a.click();
     }
 
     function onDelete(d, id) {
-        if (!confirm("삭제할까요?")) return;
-        mealDB[d] = mealDB[d].filter(x => x.id !== id);
-        if (!mealDB[d].length) delete mealDB[d];
-        localStorage.setItem(DB_KEY, JSON.stringify(mealDB)); renderAll();
+        if (confirm("이 기록을 삭제할까요?")) {
+            mealDB[d] = mealDB[d].filter(x => x.id !== id);
+            if (!mealDB[d].length) delete mealDB[d];
+            localStorage.setItem(DB_KEY, JSON.stringify(mealDB)); renderAll();
+        }
     }
 
     function changeMonth(v) { calendarDate.setMonth(calendarDate.getMonth() + v); renderAll(); }
