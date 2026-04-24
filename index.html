@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Meal Log PRO | Cloud</title>
+    <title>Meal Log PRO | Sync</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exif-js/2.3.0/exif.min.js"></script>
     <style>
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
@@ -16,6 +16,7 @@
         .cal-grid div { padding: 12px 0; font-size: 0.95rem; border-radius: 12px; cursor: pointer; }
         .day-cell.active { background: #5c7cfa !important; color: white !important; font-weight: bold; }
         .day-cell.has-data::after { content: ''; display: block; width: 5px; height: 5px; background: #ff6b6b; border-radius: 50%; margin: 2px auto 0; }
+        
         .input-row { display: flex; gap: 12px; align-items: flex-start; }
         .photo-area { width: 100px; height: 100px; background: #f8f9fa; border: 2px dashed #ccd0d5; border-radius: 15px; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; flex-shrink: 0; overflow: hidden; position: relative; }
         .photo-area img { width: 100%; height: 100%; object-fit: cover; }
@@ -23,21 +24,24 @@
         textarea { width: 100%; border: 1px solid #ddd; border-radius: 12px; padding: 12px; font-size: 1rem; height: 60px; resize: none; font-family: inherit; }
         #fieldTime { width: 100%; border: 1px solid #ddd; border-radius: 10px; padding: 10px; font-size: 0.9rem; background: #fff; }
         .save-btn { width: 100%; background: #5c7cfa; color: white; border: none; padding: 18px; border-radius: 15px; font-weight: bold; margin-top: 15px; font-size: 1.1rem; }
+
         .feed-card { background: white; border-radius: 20px; margin-bottom: 15px; padding: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
         .feed-content { display: flex; gap: 12px; align-items: flex-start; }
         .feed-photo { width: 150px; height: 150px; border-radius: 12px; overflow: hidden; position: relative; flex-shrink: 0; background: #eee; }
         .feed-photo img { width: 100%; height: 100%; object-fit: cover; }
         .feed-info { flex: 1; display: flex; flex-direction: column; justify-content: space-between; min-height: 150px; padding: 2px 0; }
         .feed-memo { font-size: 1rem; line-height: 1.4; color: #333; white-space: pre-wrap; }
+        
         .feed-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; padding-top: 8px; border-top: 1px solid #f1f3f5; width: 100%; }
         .feed-time-text { font-size: 0.85rem; color: #5c7cfa; font-weight: bold; }
         .feed-delete-btn { font-size: 0.85rem; color: #ff6b6b; cursor: pointer; padding: 5px; }
         .time-stamp { position: absolute; bottom: 5px; right: 5px; background: rgba(0,0,0,0.7); color: white; font-size: 10px; padding: 3px 6px; border-radius: 4px; font-family: monospace; pointer-events: none; text-align: right; }
-        #loadingOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); z-index: 1000; justify-content: center; align-items: center; font-weight: bold; }
+
+        #loadingOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); z-index: 1000; flex-direction: column; justify-content: center; align-items: center; font-weight: bold; }
     </style>
 </head>
 <body>
-<div id="loadingOverlay">구글 시트로 전송 중...</div>
+<div id="loadingOverlay">구글 시트와 동기화 중...</div>
 <div class="container">
     <div class="card">
         <div class="cal-header"><button class="btn-m" onclick="changeMonth(-1)">◀</button><span id="labelMonth"></span><button class="btn-m" onclick="changeMonth(1)">▶</button></div>
@@ -55,7 +59,7 @@
 </div>
 
 <script>
-    // 사용자님의 구글 웹 앱 URL 연결
+    // 1. 본인의 구글 웹 앱 URL을 여기에 넣으세요
     const API_URL = "https://script.google.com/macros/s/AKfycbz6bpDE-ftbwKqmrfp5rrBrzlWFc3EGqJJD02cQ8THBMdehxyYlF3xJ9JIHx7JARcY/exec";
     const DB_KEY = 'MEAL_LOG_V15_OPTIMIZED';
     
@@ -127,16 +131,12 @@
         const dt = fTime.split("T");
         const record = { id: Date.now(), time: dt[1], memo: memo, imgs: tempImgs };
         
-        // 1. 브라우저에 임시 저장 (오프라인 대비 및 빠른 화면 업데이트)
-        if (!mealDB[dt[0]]) mealDB[dt[0]] = [];
-        mealDB[dt[0]].push(record);
-        localStorage.setItem(DB_KEY, JSON.stringify(mealDB));
-
-        // 2. 구글 시트로 영구 전송
         document.getElementById('loadingOverlay').style.display = 'flex';
+        document.getElementById('loadingOverlay').innerText = "시트로 전송 중...";
         btn.disabled = true;
 
         const payload = {
+            action: "save",
             date: dt[0],
             time: dt[1],
             memo: memo,
@@ -146,18 +146,58 @@
         try {
             await fetch(API_URL, {
                 method: "POST",
-                mode: "no-cors", // 브라우저 보안 정책 대응
+                mode: "no-cors",
                 body: JSON.stringify(payload)
             });
-            alert("구글 시트에 안전하게 기록되었습니다!");
-        } catch (e) {
-            alert("시트 전송 실패 (기기는 저장됨)");
-        } finally {
-            document.getElementById('loadingOverlay').style.display = 'none';
-            btn.disabled = false;
+            
+            // 시트 전송 성공 후 로컬에도 반영
+            if (!mealDB[dt[0]]) mealDB[dt[0]] = [];
+            mealDB[dt[0]].push(record);
+            localStorage.setItem(DB_KEY, JSON.stringify(mealDB));
+            
+            alert("구글 시트에 저장 완료!");
             tempImgs = []; document.getElementById('boxPreview').innerHTML = "📷 사진 추가";
             document.getElementById('fieldMemo').value = "";
             activeDateStr = dt[0]; renderAll();
+        } catch (e) {
+            alert("서버 연결에 실패했습니다.");
+        } finally {
+            document.getElementById('loadingOverlay').style.display = 'none';
+            btn.disabled = false;
+        }
+    }
+
+    async function onDelete(d, id) {
+        if (!confirm("이 기록을 삭제할까요? 구글 시트에서도 삭제됩니다.")) return;
+        
+        const targetIdx = mealDB[d].findIndex(x => x.id === id);
+        if (targetIdx === -1) return;
+        
+        const targetData = mealDB[d][targetIdx];
+        document.getElementById('loadingOverlay').style.display = 'flex';
+        document.getElementById('loadingOverlay').innerText = "시트에서 삭제 중...";
+
+        try {
+            await fetch(API_URL, {
+                method: "POST",
+                mode: "no-cors",
+                body: JSON.stringify({
+                    action: "delete",
+                    date: d,
+                    time: targetData.time,
+                    memo: targetData.memo
+                })
+            });
+
+            mealDB[d].splice(targetIdx, 1);
+            if (!mealDB[d].length) delete mealDB[d];
+            localStorage.setItem(DB_KEY, JSON.stringify(mealDB));
+            renderAll();
+            alert("삭제 완료!");
+        } catch (e) {
+            alert("삭제 중 오류가 발생했습니다.");
+        } finally {
+            document.getElementById('loadingOverlay').style.display = 'none';
         }
     }
 
@@ -186,18 +226,22 @@
                     const im = it.imgs[0];
                     photoHtml = `<div class="feed-photo"><img src="${im.data}"><span class="time-stamp">${im.timeStamp.split(' ')[1]}</span></div>`;
                 }
-                html += `<div class="feed-card"><div class="feed-content">${photoHtml}<div class="feed-info"><div class="feed-memo">${it.memo || ''}</div><div class="feed-footer"><span class="feed-time-text">${hasPhoto ? '' : '🕒 ' + it.time}</span><span class="feed-delete-btn" onclick="onDelete('${activeDateStr}', ${it.id})">삭제</span></div></div></div></div>`;
+                html += `
+                    <div class="feed-card">
+                        <div class="feed-content">
+                            ${photoHtml}
+                            <div class="feed-info">
+                                <div class="feed-memo">${it.memo || ''}</div>
+                                <div class="feed-footer">
+                                    <span class="feed-time-text">${hasPhoto ? '' : '🕒 ' + it.time}</span>
+                                    <span class="feed-delete-btn" onclick="onDelete('${activeDateStr}', ${it.id})">삭제</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>`;
             });
         }
         list.innerHTML = html;
-    }
-
-    function onDelete(d, id) {
-        if (confirm("이 기록을 삭제할까요? (브라우저에서만 삭제됩니다)")) {
-            mealDB[d] = mealDB[d].filter(x => x.id !== id);
-            if (!mealDB[d].length) delete mealDB[d];
-            localStorage.setItem(DB_KEY, JSON.stringify(mealDB)); renderAll();
-        }
     }
 
     function changeMonth(v) { calendarDate.setMonth(calendarDate.getMonth() + v); renderAll(); }
