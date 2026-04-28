@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Meal Log PRO | Ultra Compact</title>
+    <title>Meal Log PRO | Final Minimal</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exif-js/2.3.0/exif.min.js"></script>
     <style>
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
@@ -11,7 +11,6 @@
         .container { max-width: 500px; margin: 0 auto; }
         .card { background: white; border-radius: 20px; padding: 12px; margin-bottom: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
         
-        /* 달력 높이 축소 */
         .cal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-weight: bold; font-size: 0.85rem; }
         .btn-m { padding: 3px 10px; background: #f1f3f5; border-radius: 8px; border: none; cursor: pointer; font-size: 0.75rem; }
         .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; }
@@ -19,53 +18,61 @@
         .day-cell.active { background: #5c7cfa !important; color: white !important; font-weight: bold; }
         .day-cell.has-data::after { content: ''; display: block; width: 4px; height: 4px; background: #ff6b6b; border-radius: 50%; margin: 1px auto 0; }
         
-        /* 입력창 높이 1/2 축소 */
-        .input-row { display: flex; gap: 10px; align-items: flex-start; }
-        .photo-area { width: 70px; height: 70px; background: #f8f9fa; border: 2px dashed #ccd0d5; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 0.6rem; flex-shrink: 0; overflow: hidden; position: relative; }
+        /* 1. 사진 입력창 가로로 크게 조정 */
+        .input-row { display: flex; flex-direction: column; gap: 8px; }
+        .photo-area { width: 100%; height: 120px; background: #f8f9fa; border: 2px dashed #ccd0d5; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; overflow: hidden; position: relative; }
         .photo-area img { width: 100%; height: 100%; object-fit: cover; }
-        .fields { flex: 1; display: flex; flex-direction: column; gap: 5px; }
-        textarea { width: 100%; border: 1px solid #ddd; border-radius: 10px; padding: 6px; font-size: 0.85rem; height: 40px; resize: none; font-family: inherit; }
-        #fieldTime { width: 100%; border: 1px solid #ddd; border-radius: 8px; padding: 5px; font-size: 0.8rem; background: #fff; }
-        .save-btn { width: 100%; background: #5c7cfa; color: white; border: none; padding: 10px; border-radius: 12px; font-weight: bold; margin-top: 8px; font-size: 0.9rem; }
+        
+        .fields { display: flex; flex-direction: column; gap: 6px; }
+        textarea { width: 100%; border: 1px solid #ddd; border-radius: 10px; padding: 8px; font-size: 0.9rem; height: 45px; resize: none; font-family: inherit; }
+        #fieldTime { width: 100%; border: 1px solid #ddd; border-radius: 8px; padding: 6px; font-size: 0.85rem; background: #fff; }
+        .save-btn { width: 100%; background: #5c7cfa; color: white; border: none; padding: 12px; border-radius: 12px; font-weight: bold; margin-top: 5px; font-size: 0.95rem; }
 
-        /* 리스트 카드 높이 대폭 축소 */
-        .feed-card { background: white; border-radius: 15px; margin-bottom: 8px; padding: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.03); }
-        .feed-content { display: flex; gap: 10px; align-items: flex-start; }
-        .feed-photo { width: 100px; height: 100px; border-radius: 10px; overflow: hidden; position: relative; flex-shrink: 0; background: #eee; }
+        /* 리스트 카드 디자인 수정 */
+        .feed-card { background: white; border-radius: 20px; margin-bottom: 12px; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); position: relative; cursor: pointer; }
+        /* 2. 중간 옅은 선 제거 및 레이아웃 정리 */
+        .feed-content { display: flex; flex-direction: column; gap: 8px; }
+        
+        .feed-header-info { display: flex; align-items: center; gap: 10px; }
+        .feed-time-text { font-size: 0.85rem; color: #5c7cfa; font-weight: bold; white-space: nowrap; }
+        
+        /* 3. 수동 입력 시 시간 옆에 메모 */
+        .feed-memo { font-size: 1rem; line-height: 1.4; color: #333; white-space: pre-wrap; }
+        
+        /* 4 & 6. 사진 입력 시 시간 아래 사진 배치 및 1.3배 확대 */
+        .feed-photo { width: 130px; height: 130px; border-radius: 12px; overflow: hidden; background: #eee; margin-top: 4px; }
         .feed-photo img { width: 100%; height: 100%; object-fit: cover; }
-        .feed-info { flex: 1; display: flex; flex-direction: column; justify-content: space-between; min-height: 100px; padding: 0; }
-        .feed-memo { font-size: 0.95rem; line-height: 1.3; color: #333; white-space: pre-wrap; overflow: hidden; text-overflow: ellipsis; }
-        .feed-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; padding-top: 4px; border-top: 1px solid #f8f9fa; width: 100%; }
-        .feed-time-text { font-size: 0.8rem; color: #5c7cfa; font-weight: bold; }
-        .feed-delete-btn { font-size: 0.8rem; color: #ff8787; cursor: pointer; padding: 2px 4px; }
 
         #loadingOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); z-index: 1000; flex-direction: column; justify-content: center; align-items: center; font-weight: bold; color: #5c7cfa; }
     </style>
 </head>
 <body>
-<div id="loadingOverlay">작업 중...</div>
+<div id="loadingOverlay">저장 중...</div>
 <div class="container">
     <div class="card">
         <div class="cal-header"><button class="btn-m" onclick="changeMonth(-1)">◀</button><span id="labelMonth"></span><button class="btn-m" onclick="changeMonth(1)">▶</button></div>
         <div id="gridDays" class="cal-grid"></div>
     </div>
+    
     <div class="card">
         <div class="input-row">
-            <div class="photo-area" onclick="document.getElementById('fileIn').click()"><div id="boxPreview">📷 사진</div></div>
+            <div class="photo-area" onclick="document.getElementById('fileIn').click()"><div id="boxPreview">📷 사진 추가 (터치)</div></div>
             <div class="fields">
                 <input type="datetime-local" id="fieldTime">
-                <textarea id="fieldMemo" placeholder="메모..."></textarea>
+                <textarea id="fieldMemo" placeholder="메모를 입력하세요..."></textarea>
             </div>
         </div>
         <input type="file" id="fileIn" accept="image/*" style="display:none" onchange="onFileChange(this)">
         <button class="save-btn" id="saveBtn" onclick="onSave()">기록 저장</button>
     </div>
+    
     <div id="listFeed"></div>
 </div>
 
 <script>
     const API_URL = "https://script.google.com/macros/s/AKfycbz6bpDE-ftbwKqmrfp5rrBrzlWFc3EGqJJD02cQ8THBMdehxyYlF3xJ9JIHx7JARcY/exec";
     const DB_KEY = 'MEAL_LOG_V15_OPTIMIZED';
+    
     let mealDB = JSON.parse(localStorage.getItem(DB_KEY) || '{}');
     let calendarDate = new Date();
     let activeDateStr = getFormatDate(new Date());
@@ -87,14 +94,14 @@
         const img = new Image();
         img.onload = function() {
             const canvas = document.createElement('canvas');
-            const MAX_SIZE = 600;
+            const MAX_SIZE = 800; 
             let width = img.width, height = img.height;
             if (width > height) { if (width > MAX_SIZE) { height *= MAX_SIZE / width; width = MAX_SIZE; } }
             else { if (height > MAX_SIZE) { width *= MAX_SIZE / height; height = MAX_SIZE; } }
             canvas.width = width; canvas.height = height;
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, width, height);
-            callback(canvas.toDataURL('image/jpeg', 0.5));
+            callback(canvas.toDataURL('image/jpeg', 0.6));
         };
         img.src = imgSrc;
     }
@@ -133,6 +140,8 @@
         const dt = fTime.split("T");
         const record = { id: Date.now(), time: dt[1], memo: memo, imgs: tempImgs };
         const overlay = document.getElementById('loadingOverlay');
+        // 5. 저장 중.. 멘트 수정
+        overlay.innerText = "저장 중...";
         overlay.style.display = 'flex';
         btn.disabled = true;
         try {
@@ -140,7 +149,7 @@
             if (!mealDB[dt[0]]) mealDB[dt[0]] = [];
             mealDB[dt[0]].push(record);
             localStorage.setItem(DB_KEY, JSON.stringify(mealDB));
-            tempImgs = []; document.getElementById('boxPreview').innerHTML = "📷 사진";
+            tempImgs = []; document.getElementById('boxPreview').innerHTML = "📷 사진 추가 (터치)";
             document.getElementById('fieldMemo').value = "";
             activeDateStr = dt[0]; renderAll();
         } catch (e) { console.error(e); }
@@ -148,11 +157,13 @@
     }
 
     async function onDelete(d, id) {
-        if (!confirm("삭제할까요?")) return;
+        // 7. 삭제 글자 대신 칸 선택 시 삭제
+        if (!confirm("이 기록을 삭제할까요?")) return;
         const targetIdx = mealDB[d].findIndex(x => x.id === id);
         if (targetIdx === -1) return;
         const targetData = mealDB[d][targetIdx];
         const overlay = document.getElementById('loadingOverlay');
+        overlay.innerText = "삭제 중...";
         overlay.style.display = 'flex';
         try {
             await fetch(API_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({ action: "delete", date: d, time: targetData.time, memo: targetData.memo }) });
@@ -179,24 +190,25 @@
         }
         const list = document.getElementById('listFeed');
         const items = mealDB[activeDateStr] || [];
-        let html = `<h3 style="padding: 5px; font-size: 0.9rem;">📂 ${activeDateStr}</h3>`;
-        if (!items.length) html += '<p style="text-align:center; padding:20px; color:#ccc; font-size:0.8rem;">기록 없음</p>';
+        let html = `<h3 style="padding: 10px 5px; font-size: 1rem;">📂 ${activeDateStr}</h3>`;
+        if (!items.length) html += '<p style="text-align:center; padding:30px; color:#ccc; font-size:0.9rem;">기록 없음</p>';
         else {
             items.sort((a,b) => a.time.localeCompare(b.time)).forEach(it => {
                 const hasPhoto = it.imgs && it.imgs.length > 0;
-                // 리스트 사진 크기를 100px로 조정하여 카드 높이 축소
-                let photoHtml = hasPhoto ? `<div class="feed-photo" style="width:100px; height:100px;"><img src="${it.imgs[0].data}"></div>` : '';
+                let photoHtml = hasPhoto ? `<div class="feed-photo"><img src="${it.imgs[0].data}"></div>` : '';
+                
+                // 수동입력/사진입력 레이아웃 구분
                 html += `
-                    <div class="feed-card">
+                    <div class="feed-card" onclick="onDelete('${activeDateStr}', ${it.id})">
                         <div class="feed-content">
-                            ${photoHtml}
-                            <div class="feed-info" style="min-height: ${hasPhoto ? '100px' : 'auto'};">
-                                <div class="feed-memo" style="font-size:0.9rem;">${it.memo || ''}</div>
-                                <div class="feed-footer">
-                                    <span class="feed-time-text">🕒 ${it.time}</span>
-                                    <span class="feed-delete-btn" onclick="onDelete('${activeDateStr}', ${it.id})">삭제</span>
-                                </div>
+                            <div class="feed-header-info">
+                                <span class="feed-time-text">🕒 ${it.time}</span>
+                                ${!hasPhoto ? `<span class="feed-memo">${it.memo || ''}</span>` : ''}
                             </div>
+                            ${hasPhoto ? `
+                                <div class="feed-memo" style="margin-bottom:5px;">${it.memo || ''}</div>
+                                ${photoHtml}
+                            ` : ''}
                         </div>
                     </div>`;
             });
@@ -208,4 +220,3 @@
 </script>
 </body>
 </html>
-
