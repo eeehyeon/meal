@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Meal Log PRO | Recovery</title>
+    <title>Meal Log PRO | Final Sync</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exif-js/2.3.0/exif.min.js"></script>
     <style>
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
@@ -13,7 +13,7 @@
         .cal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-weight: bold; font-size: 0.85rem; }
         .btn-m { padding: 3px 10px; background: #f1f3f5; border-radius: 8px; border: none; cursor: pointer; font-size: 0.75rem; }
         .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; }
-        .cal-grid div { padding: 4px 0; font-size: 0.8rem; border-radius: 10px; cursor: pointer; min-height: 35px; }
+        .cal-grid div { padding: 4px 0; font-size: 0.8rem; border-radius: 10px; cursor: pointer; min-height: 35px; position: relative; }
         .day-cell.active { background: #5c7cfa !important; color: white !important; font-weight: bold; }
         .day-cell.has-data::after { content: ''; display: block; width: 4px; height: 4px; background: #ff6b6b; border-radius: 50%; margin: 1px auto 0; }
         .input-row { display: flex; gap: 10px; align-items: stretch; }
@@ -21,7 +21,7 @@
         .photo-area img { width: 100%; height: 100%; object-fit: cover; }
         .fields { flex: 1; display: flex; flex-direction: column; gap: 6px; max-width: 240px; }
         textarea { width: 100%; border: 1px solid #ddd; border-radius: 10px; padding: 8px; font-size: 0.9rem; flex: 1; min-height: 60px; resize: none; font-family: inherit; }
-        #fieldTime { width: 100%; border: 1px solid #ddd; border-radius: 8px; padding: 6px; font-size: 0.95rem; background: #fff; font-weight: normal; color: #000; text-align: center; font-family: inherit; }
+        #fieldTime { width: 100%; border: 1px solid #ddd; border-radius: 8px; padding: 6px; font-size: 0.95rem; background: #fff; color: #000; text-align: center; }
         .save-btn { width: 100%; background: #5c7cfa; color: white; border: none; padding: 10px; border-radius: 12px; font-weight: bold; margin-top: 8px; font-size: 1rem; }
         .feed-card { background: white; border-radius: 20px; margin-bottom: 10px; padding: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); cursor: pointer; }
         .feed-content { display: flex; align-items: flex-start; gap: 10px; }
@@ -43,7 +43,7 @@
         <div class="input-row">
             <div class="photo-area" onclick="document.getElementById('fileIn').click()"><div id="boxPreview">📷 사진 추가</div></div>
             <div class="fields">
-                <input type="time" id="fieldTime" step="60">
+                <input type="time" id="fieldTime">
                 <textarea id="fieldMemo" placeholder="메모..."></textarea>
             </div>
         </div>
@@ -54,19 +54,13 @@
 </div>
 
 <script>
-    // 복사하신 새로운 웹 앱 URL을 아래 따옴표 안에 넣어주세요!
-    const API_URL = "여기에_새로운_웹_앱_주소를_넣어주세요";
-    
+    const API_URL = "https://script.google.com/macros/s/AKfycbyfNetC6Uf2Q714B6lyaBzcjMPeelLa0sDNYUHg2iqmn1Z-PgEddNT__CVplEeh4SA/exec";
     let mealDB = {}; 
     let calendarDate = new Date();
     let activeDateStr = getFormatDate(new Date());
     let tempImgs = [];
 
-    window.onload = function() { 
-        initTimeOnly(); 
-        renderAll(); // 달력 먼저 보여주기
-        fetchFromCloud(); // 데이터는 백그라운드에서 가져오기
-    };
+    window.onload = function() { initTimeOnly(); renderAll(); fetchFromCloud(); };
 
     function initTimeOnly() {
         const now = new Date();
@@ -80,31 +74,40 @@
 
     async function fetchFromCloud() {
         const overlay = document.getElementById('loadingOverlay');
+        overlay.innerText = "데이터 불러오는 중...";
         overlay.style.display = 'flex';
         try {
             const response = await fetch(API_URL);
             const data = await response.json();
             mealDB = {};
-            data.forEach(row => {
-                // 시트 날짜 형식 보정 (Google 시트 날짜는 ISO 형식이 아닐 수 있음)
-                let dateKey = row[0];
-                if (dateKey.includes("T")) dateKey = dateKey.split("T")[0];
+            data.forEach(item => {
+                let rawDate = item.date;
+                let dateKey = "";
                 
+                // 날짜 형식 보정: 시트에서 날짜 객체로 올 경우와 문자열로 올 경우 모두 대응
+                if (typeof rawDate === "string") {
+                    dateKey = rawDate.split("T")[0];
+                    if (dateKey.length > 10) {
+                        const d = new Date(rawDate);
+                        dateKey = getFormatDate(d);
+                    }
+                } else {
+                    dateKey = getFormatDate(new Date(rawDate));
+                }
+
                 if (!mealDB[dateKey]) mealDB[dateKey] = [];
                 mealDB[dateKey].push({ 
                     id: Math.random(), 
-                    time: row[1], 
-                    memo: row[2], 
-                    imgs: row[3] ? [{data: row[3]}] : [] 
+                    time: item.time, 
+                    memo: item.memo, 
+                    imgs: item.image ? [{data: item.image}] : [] 
                 });
             });
             renderAll();
         } catch (e) { 
-            console.error("Cloud fetch error", e);
-            alert("데이터를 불러오지 못했습니다. API URL과 배포 설정을 확인해주세요.");
-        } finally { 
-            overlay.style.display = 'none'; 
-        }
+            console.error("Fetch error:", e);
+            alert("데이터를 가져오는 중 오류가 발생했습니다. 구글 시트 제목줄 확인과 재배포(모든 사용자 권한)를 확인해주세요.");
+        } finally { overlay.style.display = 'none'; }
     }
 
     function compressImage(imgSrc, callback) {
@@ -135,13 +138,10 @@
                     activeDateStr = p[0].replace(/:/g, "-"); 
                     calendarDate = new Date(activeDateStr);
                     pTime = p[1].substring(0, 5);
-                } else {
-                    const n = new Date(); 
-                    pTime = String(n.getHours()).padStart(2, '0') + ":" + String(n.getMinutes()).padStart(2, '0');
+                    document.getElementById('fieldTime').value = pTime;
                 }
-                document.getElementById('fieldTime').value = pTime;
                 compressImage(e.target.result, function(compressedData) {
-                    tempImgs.push({ data: compressedData, time: pTime });
+                    tempImgs.push({ data: compressedData, time: pTime || document.getElementById('fieldTime').value });
                     document.getElementById('boxPreview').innerHTML = `<img src="${compressedData}">`;
                     renderAll();
                 });
@@ -161,11 +161,10 @@
         btn.disabled = true;
         try {
             await fetch(API_URL, { 
-                method: "POST", 
-                mode: "no-cors", 
+                method: "POST", mode: "no-cors", 
                 body: JSON.stringify({ action: "save", date: activeDateStr, time: timeVal, memo: memo, image: tempImgs.length > 0 ? tempImgs[0].data : "" }) 
             });
-            await fetchFromCloud();
+            await fetchFromCloud(); 
             tempImgs = []; document.getElementById('boxPreview').innerHTML = "📷 사진 추가";
             document.getElementById('fieldMemo').value = "";
         } catch (e) { console.error(e); }
@@ -216,4 +215,3 @@
 </script>
 </body>
 </html>
-
