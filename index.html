@@ -3,51 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Meal Log PRO | 24H Sync</title>
+    <title>Meal Log PRO | Infinite Cloud</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exif-js/2.3.0/exif.min.js"></script>
     <style>
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
         body { font-family: -apple-system, sans-serif; background: #f0f2f5; color: #222; padding: 8px; padding-bottom: 40px; }
         .container { max-width: 500px; margin: 0 auto; }
         .card { background: white; border-radius: 20px; padding: 12px; margin-bottom: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        
         .cal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-weight: bold; font-size: 0.85rem; }
         .btn-m { padding: 3px 10px; background: #f1f3f5; border-radius: 8px; border: none; cursor: pointer; font-size: 0.75rem; }
         .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; }
         .cal-grid div { padding: 4px 0; font-size: 0.8rem; border-radius: 10px; cursor: pointer; }
         .day-cell.active { background: #5c7cfa !important; color: white !important; font-weight: bold; }
         .day-cell.has-data::after { content: ''; display: block; width: 4px; height: 4px; background: #ff6b6b; border-radius: 50%; margin: 1px auto 0; }
-        
         .input-row { display: flex; gap: 10px; align-items: stretch; }
         .photo-area { width: 130px; height: 100px; background: #f8f9fa; border: 2px dashed #ccd0d5; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; flex-shrink: 0; overflow: hidden; position: relative; }
         .photo-area img { width: 100%; height: 100%; object-fit: cover; }
-        
         .fields { flex: 1; display: flex; flex-direction: column; gap: 6px; max-width: 240px; }
         textarea { width: 100%; border: 1px solid #ddd; border-radius: 10px; padding: 8px; font-size: 0.9rem; flex: 1; min-height: 60px; resize: none; font-family: inherit; }
-        
-        /* 시간 입력창: 볼드체 제거, 텍스트 검은색, 24시간 형식 지원 */
-        #fieldTime { 
-            width: 100%; 
-            border: 1px solid #ddd; 
-            border-radius: 8px; 
-            padding: 6px; 
-            font-size: 0.95rem; 
-            background: #fff; 
-            font-weight: normal; /* 볼드체 제거 */
-            color: #000;         /* 검은색 적용 */
-            text-align: center; 
-            font-family: inherit;
-        }
-        
+        #fieldTime { width: 100%; border: 1px solid #ddd; border-radius: 8px; padding: 6px; font-size: 0.95rem; background: #fff; font-weight: normal; color: #000; text-align: center; font-family: inherit; }
         .save-btn { width: 100%; background: #5c7cfa; color: white; border: none; padding: 10px; border-radius: 12px; font-weight: bold; margin-top: 8px; font-size: 1rem; }
-
         .feed-card { background: white; border-radius: 20px; margin-bottom: 10px; padding: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); cursor: pointer; }
         .feed-content { display: flex; align-items: flex-start; gap: 10px; }
         .feed-time-text { font-size: 0.8rem; color: #5c7cfa; font-weight: bold; white-space: nowrap; padding-top: 2px; }
         .feed-photo { width: 130px; height: 130px; border-radius: 12px; overflow: hidden; flex-shrink: 0; background: #eee; }
         .feed-photo img { width: 100%; height: 100%; object-fit: cover; }
         .feed-memo { font-size: 0.95rem; line-height: 1.4; color: #333; white-space: pre-wrap; flex: 1; }
-
         #loadingOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); z-index: 1000; flex-direction: column; justify-content: center; align-items: center; font-weight: bold; color: #5c7cfa; }
     </style>
 </head>
@@ -58,7 +39,6 @@
         <div class="cal-header"><button class="btn-m" onclick="changeMonth(-1)">◀</button><span id="labelMonth"></span><button class="btn-m" onclick="changeMonth(1)">▶</button></div>
         <div id="gridDays" class="cal-grid"></div>
     </div>
-    
     <div class="card">
         <div class="input-row">
             <div class="photo-area" onclick="document.getElementById('fileIn').click()"><div id="boxPreview">📷 사진 추가</div></div>
@@ -70,7 +50,6 @@
         <input type="file" id="fileIn" accept="image/*" style="display:none" onchange="onFileChange(this)">
         <button class="save-btn" id="saveBtn" onclick="onSave()">저장</button>
     </div>
-    
     <div id="listFeed"></div>
 </div>
 
@@ -78,23 +57,40 @@
     const API_URL = "https://script.google.com/macros/s/AKfycbz6bpDE-ftbwKqmrfp5rrBrzlWFc3EGqJJD02cQ8THBMdehxyYlF3xJ9JIHx7JARcY/exec";
     const DB_KEY = 'MEAL_LOG_V15_OPTIMIZED';
     
-    let mealDB = JSON.parse(localStorage.getItem(DB_KEY) || '{}');
+    // 로컬 데이터를 완전히 비웁니다 (공간 확보용)
+    localStorage.removeItem(DB_KEY);
+    let mealDB = {}; 
+    
     let calendarDate = new Date();
     let activeDateStr = getFormatDate(new Date());
     let tempImgs = [];
 
-    window.onload = function() { initTimeOnly(); renderAll(); };
+    window.onload = function() { initTimeOnly(); fetchFromCloud(); };
 
     function initTimeOnly() {
         const now = new Date();
-        const hh = String(now.getHours()).padStart(2, '0');
-        const mm = String(now.getMinutes()).padStart(2, '0');
-        document.getElementById('fieldTime').value = `${hh}:${mm}`;
+        document.getElementById('fieldTime').value = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
     }
 
     function getFormatDate(date) {
         const d = new Date(date);
         return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, '0') + "-" + String(d.getDate()).padStart(2, '0');
+    }
+
+    // 구글 시트에서 최신 데이터를 가져오는 함수 (반영구 사용 가능)
+    async function fetchFromCloud() {
+        try {
+            const response = await fetch(API_URL);
+            const data = await response.json();
+            mealDB = {};
+            // 시트 데이터(rows)를 앱 형식으로 변환
+            data.slice(0).forEach(row => {
+                const date = row[0], time = row[1], memo = row[2], img = row[3];
+                if (!mealDB[date]) mealDB[date] = [];
+                mealDB[date].push({ id: Date.now() + Math.random(), time, memo, imgs: img ? [{data: img}] : [] });
+            });
+            renderAll();
+        } catch (e) { console.error("Cloud fetch error", e); }
     }
 
     function compressImage(imgSrc, callback) {
@@ -129,7 +125,6 @@
                 } else {
                     const n = new Date(); 
                     pTime = String(n.getHours()).padStart(2, '0') + ":" + String(n.getMinutes()).padStart(2, '0');
-                    document.getElementById('fieldTime').value = pTime;
                 }
                 compressImage(e.target.result, function(compressedData) {
                     tempImgs.push({ data: compressedData, time: pTime });
@@ -147,7 +142,6 @@
         const memo = document.getElementById('fieldMemo').value;
         if (!timeVal || btn.disabled) return;
 
-        const record = { id: Date.now(), time: timeVal, memo: memo, imgs: tempImgs };
         const overlay = document.getElementById('loadingOverlay');
         overlay.innerText = "저장 중...";
         overlay.style.display = 'flex';
@@ -165,30 +159,23 @@
                     image: tempImgs.length > 0 ? tempImgs[0].data : "" 
                 }) 
             });
-            if (!mealDB[activeDateStr]) mealDB[activeDateStr] = [];
-            mealDB[activeDateStr].push(record);
-            localStorage.setItem(DB_KEY, JSON.stringify(mealDB));
+            // 저장 성공 시 시트에서 최신 데이터를 다시 불러옴
+            await fetchFromCloud();
             tempImgs = []; document.getElementById('boxPreview').innerHTML = "📷 사진 추가";
             document.getElementById('fieldMemo').value = "";
-            renderAll();
         } catch (e) { console.error(e); }
         finally { overlay.style.display = 'none'; btn.disabled = false; }
     }
 
     async function onDelete(d, id) {
         if (!confirm("이 기록을 삭제할까요?")) return;
-        const targetIdx = mealDB[d].findIndex(x => x.id === id);
-        if (targetIdx === -1) return;
-        const targetData = mealDB[d][targetIdx];
+        const targetData = mealDB[d].find(x => x.id === id);
         const overlay = document.getElementById('loadingOverlay');
         overlay.innerText = "삭제 중...";
         overlay.style.display = 'flex';
         try {
             await fetch(API_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({ action: "delete", date: d, time: targetData.time, memo: targetData.memo }) });
-            mealDB[d].splice(targetIdx, 1);
-            if (!mealDB[d].length) delete mealDB[d];
-            localStorage.setItem(DB_KEY, JSON.stringify(mealDB));
-            renderAll();
+            await fetchFromCloud();
         } catch (e) { console.error(e); }
         finally { overlay.style.display = 'none'; }
     }
@@ -204,10 +191,7 @@
             const div = document.createElement('div');
             div.className = 'day-cell' + (dStr === activeDateStr ? ' active' : '') + (mealDB[dStr] ? ' has-data' : '');
             div.innerText = d; 
-            div.onclick = () => { 
-                activeDateStr = dStr; 
-                renderAll(); 
-            };
+            div.onclick = () => { activeDateStr = dStr; renderAll(); };
             grid.appendChild(div);
         }
         const list = document.getElementById('listFeed');
@@ -218,14 +202,7 @@
             items.sort((a,b) => a.time.localeCompare(b.time)).forEach(it => {
                 const hasPhoto = it.imgs && it.imgs.length > 0;
                 let photoHtml = hasPhoto ? `<div class="feed-photo"><img src="${it.imgs[0].data}"></div>` : '';
-                html += `
-                    <div class="feed-card" onclick="onDelete('${activeDateStr}', ${it.id})">
-                        <div class="feed-content">
-                            <span class="feed-time-text">${it.time}</span>
-                            ${photoHtml}
-                            <span class="feed-memo">${it.memo || ''}</span>
-                        </div>
-                    </div>`;
+                html += `<div class="feed-card" onclick="onDelete('${activeDateStr}', ${it.id})"><div class="feed-content"><span class="feed-time-text">${it.time}</span>${photoHtml}<span class="feed-memo">${it.memo || ''}</span></div></div>`;
             });
         }
         list.innerHTML = html;
