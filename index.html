@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Meal Log PRO | Final Sync</title>
+    <title>Meal Log PRO | Final Fix</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exif-js/2.3.0/exif.min.js"></script>
     <style>
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
@@ -29,11 +29,10 @@
         .feed-photo { width: 130px; height: 130px; border-radius: 12px; overflow: hidden; flex-shrink: 0; background: #eee; }
         .feed-photo img { width: 100%; height: 100%; object-fit: cover; }
         .feed-memo { font-size: 0.95rem; line-height: 1.4; color: #333; white-space: pre-wrap; flex: 1; }
-        #loadingOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); z-index: 1000; flex-direction: column; justify-content: center; align-items: center; font-weight: bold; color: #5c7cfa; }
+        #syncStatus { font-size: 0.7rem; color: #999; text-align: center; margin-top: 5px; }
     </style>
 </head>
 <body>
-<div id="loadingOverlay">데이터 불러오는 중...</div>
 <div class="container">
     <div class="card">
         <div class="cal-header"><button class="btn-m" onclick="changeMonth(-1)">◀</button><span id="labelMonth"></span><button class="btn-m" onclick="changeMonth(1)">▶</button></div>
@@ -49,18 +48,20 @@
         </div>
         <input type="file" id="fileIn" accept="image/*" style="display:none" onchange="onFileChange(this)">
         <button class="save-btn" id="saveBtn" onclick="onSave()">저장</button>
+        <div id="syncStatus"></div>
     </div>
     <div id="listFeed"></div>
 </div>
 
 <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbyfNetC6Uf2Q714B6lyaBzcjMPeelLa0sDNYUHg2iqmn1Z-PgEddNT__CVplEeh4SA/exec";
-    let mealDB = {}; 
+    const API_URL = "여기에_웹_앱_URL_넣으세요";
+    const DB_KEY = 'MEAL_LOG_V20_LOCAL';
+    let mealDB = JSON.parse(localStorage.getItem(DB_KEY) || '{}');
     let calendarDate = new Date();
     let activeDateStr = getFormatDate(new Date());
     let tempImgs = [];
 
-    window.onload = function() { initTimeOnly(); renderAll(); fetchFromCloud(); };
+    window.onload = function() { initTimeOnly(); renderAll(); syncFromCloud(); };
 
     function initTimeOnly() {
         const now = new Date();
@@ -72,58 +73,31 @@
         return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, '0') + "-" + String(d.getDate()).padStart(2, '0');
     }
 
-    async function fetchFromCloud() {
-        const overlay = document.getElementById('loadingOverlay');
-        overlay.innerText = "데이터 불러오는 중...";
-        overlay.style.display = 'flex';
+    async function syncFromCloud() {
+        document.getElementById('syncStatus').innerText = "☁️ 동기화 중...";
         try {
             const response = await fetch(API_URL);
             const data = await response.json();
-            mealDB = {};
-            data.forEach(item => {
-                let rawDate = item.date;
-                let dateKey = "";
-                
-                // 날짜 형식 보정: 시트에서 날짜 객체로 올 경우와 문자열로 올 경우 모두 대응
-                if (typeof rawDate === "string") {
-                    dateKey = rawDate.split("T")[0];
-                    if (dateKey.length > 10) {
-                        const d = new Date(rawDate);
-                        dateKey = getFormatDate(d);
+            if (data.length > 0) {
+                // 클라우드 데이터를 로컬에 병합 (날짜 오류 방지)
+                data.forEach(row => {
+                    let dStr = String(row[0]);
+                    if (dStr.includes("T")) dStr = dStr.split("T")[0];
+                    if (dStr.startsWith("1899")) return; // 오류 날짜 무시
+
+                    if (!mealDB[dStr]) mealDB[dStr] = [];
+                    const exists = mealDB[dStr].some(it => it.time === String(row[1]) && it.memo === String(row[2]));
+                    if (!exists) {
+                        mealDB[dStr].push({ id: Date.now()+Math.random(), time: String(row[1]), memo: String(row[2]), imgs: row[3] ? [{data: row[3]}] : [] });
                     }
-                } else {
-                    dateKey = getFormatDate(new Date(rawDate));
-                }
-
-                if (!mealDB[dateKey]) mealDB[dateKey] = [];
-                mealDB[dateKey].push({ 
-                    id: Math.random(), 
-                    time: item.time, 
-                    memo: item.memo, 
-                    imgs: item.image ? [{data: item.image}] : [] 
                 });
-            });
-            renderAll();
+                localStorage.setItem(DB_KEY, JSON.stringify(mealDB));
+                renderAll();
+            }
+            document.getElementById('syncStatus').innerText = "✅ 동기화 완료";
         } catch (e) { 
-            console.error("Fetch error:", e);
-            alert("데이터를 가져오는 중 오류가 발생했습니다. 구글 시트 제목줄 확인과 재배포(모든 사용자 권한)를 확인해주세요.");
-        } finally { overlay.style.display = 'none'; }
-    }
-
-    function compressImage(imgSrc, callback) {
-        const img = new Image();
-        img.onload = function() {
-            const canvas = document.createElement('canvas');
-            const MAX_SIZE = 800; 
-            let width = img.width, height = img.height;
-            if (width > height) { if (width > MAX_SIZE) { height *= MAX_SIZE / width; width = MAX_SIZE; } }
-            else { if (height > MAX_SIZE) { width *= MAX_SIZE / height; height = MAX_SIZE; } }
-            canvas.width = width; canvas.height = height;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, width, height);
-            callback(canvas.toDataURL('image/jpeg', 0.6));
-        };
-        img.src = imgSrc;
+            document.getElementById('syncStatus').innerText = "⚠️ 오프라인 모드";
+        }
     }
 
     function onFileChange(input) {
@@ -132,56 +106,63 @@
         reader.onload = function(e) {
             EXIF.getData(file, function() {
                 const dt = EXIF.getTag(this, "DateTimeOriginal");
-                let pTime = "";
-                if (dt) {
-                    const p = dt.split(" ");
-                    activeDateStr = p[0].replace(/:/g, "-"); 
-                    calendarDate = new Date(activeDateStr);
-                    pTime = p[1].substring(0, 5);
-                    document.getElementById('fieldTime').value = pTime;
-                }
-                compressImage(e.target.result, function(compressedData) {
-                    tempImgs.push({ data: compressedData, time: pTime || document.getElementById('fieldTime').value });
-                    document.getElementById('boxPreview').innerHTML = `<img src="${compressedData}">`;
-                    renderAll();
-                });
+                let pTime = dt ? dt.split(" ")[1].substring(0, 5) : document.getElementById('fieldTime').value;
+                document.getElementById('fieldTime').value = pTime;
+                
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const MAX = 600; let w = img.width, h = img.height;
+                    if (w > h) { if (w > MAX) { h *= MAX/w; w = MAX; } } else { if (h > MAX) { w *= MAX/h; h = MAX; } }
+                    canvas.width = w; canvas.height = h;
+                    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                    const compressed = canvas.toDataURL('image/jpeg', 0.5);
+                    tempImgs = [{ data: compressed, time: pTime }];
+                    document.getElementById('boxPreview').innerHTML = `<img src="${compressed}">`;
+                };
+                img.src = e.target.result;
             });
         };
         reader.readAsDataURL(file);
     }
 
     async function onSave() {
-        const btn = document.getElementById('saveBtn');
         const timeVal = document.getElementById('fieldTime').value;
         const memo = document.getElementById('fieldMemo').value;
-        if (!timeVal || btn.disabled) return;
-        const overlay = document.getElementById('loadingOverlay');
-        overlay.innerText = "저장 중...";
-        overlay.style.display = 'flex';
-        btn.disabled = true;
-        try {
-            await fetch(API_URL, { 
-                method: "POST", mode: "no-cors", 
-                body: JSON.stringify({ action: "save", date: activeDateStr, time: timeVal, memo: memo, image: tempImgs.length > 0 ? tempImgs[0].data : "" }) 
-            });
-            await fetchFromCloud(); 
-            tempImgs = []; document.getElementById('boxPreview').innerHTML = "📷 사진 추가";
-            document.getElementById('fieldMemo').value = "";
-        } catch (e) { console.error(e); }
-        finally { overlay.style.display = 'none'; btn.disabled = false; }
+        const record = { id: Date.now(), time: timeVal, memo: memo, imgs: tempImgs };
+        
+        // 1. 로컬에 즉시 저장 (속도)
+        if (!mealDB[activeDateStr]) mealDB[activeDateStr] = [];
+        mealDB[activeDateStr].push(record);
+        localStorage.setItem(DB_KEY, JSON.stringify(mealDB));
+        renderAll();
+
+        // 2. 백그라운드에서 클라우드 전송
+        fetch(API_URL, { 
+            method: "POST", mode: "no-cors", 
+            body: JSON.stringify({ action: "save", date: activeDateStr, time: timeVal, memo: memo, image: tempImgs.length > 0 ? tempImgs[0].data : "" }) 
+        });
+
+        tempImgs = []; document.getElementById('boxPreview').innerHTML = "📷 사진 추가";
+        document.getElementById('fieldMemo').value = "";
     }
 
     async function onDelete(d, id) {
-        if (!confirm("이 기록을 삭제할까요?")) return;
-        const targetData = mealDB[d].find(x => x.id === id);
-        const overlay = document.getElementById('loadingOverlay');
-        overlay.innerText = "삭제 중...";
-        overlay.style.display = 'flex';
-        try {
-            await fetch(API_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({ action: "delete", date: d, time: targetData.time, memo: targetData.memo }) });
-            await fetchFromCloud();
-        } catch (e) { console.error(e); }
-        finally { overlay.style.display = 'none'; }
+        if (!confirm("삭제할까요?")) return;
+        const idx = mealDB[d].findIndex(x => x.id === id);
+        const target = mealDB[d][idx];
+        
+        // 1. 로컬에서 즉시 삭제
+        mealDB[d].splice(idx, 1);
+        if (mealDB[d].length === 0) delete mealDB[d];
+        localStorage.setItem(DB_KEY, JSON.stringify(mealDB));
+        renderAll();
+
+        // 2. 서버에 삭제 요청
+        fetch(API_URL, { 
+            method: "POST", mode: "no-cors", 
+            body: JSON.stringify({ action: "delete", date: d, time: target.time, memo: target.memo }) 
+        });
     }
 
     function renderAll() {
@@ -201,14 +182,10 @@
         const list = document.getElementById('listFeed');
         const items = mealDB[activeDateStr] || [];
         let html = `<h3 style="padding: 10px 5px; font-size: 1rem;">📂 ${activeDateStr}</h3>`;
-        if (!items.length) html += '<p style="text-align:center; padding:30px; color:#ccc; font-size:0.9rem;">기록 없음</p>';
-        else {
-            items.sort((a,b) => a.time.localeCompare(b.time)).forEach(it => {
-                const hasPhoto = it.imgs && it.imgs.length > 0;
-                let photoHtml = hasPhoto ? `<div class="feed-photo"><img src="${it.imgs[0].data}"></div>` : '';
-                html += `<div class="feed-card" onclick="onDelete('${activeDateStr}', ${it.id})"><div class="feed-content"><span class="feed-time-text">${it.time}</span>${photoHtml}<span class="feed-memo">${it.memo || ''}</span></div></div>`;
-            });
-        }
+        items.sort((a,b) => a.time.localeCompare(b.time)).forEach(it => {
+            const photoHtml = it.imgs && it.imgs.length > 0 ? `<div class="feed-photo"><img src="${it.imgs[0].data}"></div>` : '';
+            html += `<div class="feed-card" onclick="onDelete('${activeDateStr}', ${it.id})"><div class="feed-content"><span class="feed-time-text">${it.time}</span>${photoHtml}<span class="feed-memo">${it.memo || ''}</span></div></div>`;
+        });
         list.innerHTML = html;
     }
     function changeMonth(v) { calendarDate.setMonth(calendarDate.getMonth() + v); renderAll(); }
